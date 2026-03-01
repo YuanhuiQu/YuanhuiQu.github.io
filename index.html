@@ -7,12 +7,14 @@
   <title>Yuanhui Qu</title>
   <style>
     :root {
-      --bg: #f2efe8;
-      --paper: #fffdf8;
-      --ink: #1f2937;
-      --muted: #6b7280;
-      --accent: #0f766e;
-      --border: #dfd8cc;
+      --bg: #f6f7fb;
+      --ink: #16243a;
+      --muted: #5f6b7a;
+      --surface: #ffffff;
+      --accent: #0b63f6;
+      --accent-2: #13a89e;
+      --border: #d7deea;
+      --shadow: #0c1b3320;
     }
 
     * {
@@ -26,11 +28,12 @@
     }
 
     body {
-      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at 10% 0%, #fff9e8 0%, transparent 28%),
-        radial-gradient(circle at 100% 20%, #e8faf6 0%, transparent 25%),
+        radial-gradient(circle at 8% 8%, #d6ebff 0%, transparent 30%),
+        radial-gradient(circle at 88% 10%, #e8fff8 0%, transparent 26%),
+        linear-gradient(160deg, #f8fafc 0%, #f4f7fd 55%, #eef3ff 100%),
         var(--bg);
       line-height: 1.55;
     }
@@ -42,11 +45,13 @@
     }
 
     .hero {
-      background: var(--paper);
+      background:
+        linear-gradient(120deg, #ffffffcc, #ffffffee),
+        radial-gradient(circle at right top, #dbe9ff 0%, transparent 30%);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 8px 32px #00000012;
+      border-radius: 18px;
+      padding: 2.1rem;
+      box-shadow: 0 14px 34px var(--shadow);
     }
 
     .eyebrow {
@@ -54,7 +59,7 @@
       color: var(--accent);
       font-size: 0.9rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
     }
 
@@ -69,7 +74,7 @@
       margin: 0;
       max-width: 60ch;
       font-size: 1.05rem;
-      color: #374151;
+      color: #2d3b52;
     }
 
     .cta-row {
@@ -82,16 +87,24 @@
     .btn {
       display: inline-block;
       text-decoration: none;
-      border: 1px solid var(--ink);
-      color: var(--ink);
+      border: 1px solid #b8c8e6;
+      color: #1b2d49;
       border-radius: 999px;
-      padding: 0.5rem 0.95rem;
+      padding: 0.52rem 0.98rem;
       font-weight: 600;
       font-size: 0.95rem;
+      background: #ffffffb8;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px #355d9a1e;
     }
 
     .btn.primary {
-      background: var(--ink);
+      background: linear-gradient(120deg, var(--accent), #2a88ff);
+      border-color: transparent;
       color: #fff;
     }
 
@@ -104,10 +117,11 @@
 
     .card {
       grid-column: span 12;
-      background: var(--paper);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 1.3rem 1.2rem;
+      box-shadow: 0 8px 20px #1b2d4908;
     }
 
     .card h2 {
@@ -130,6 +144,7 @@
 
     .project-title {
       font-weight: 700;
+      color: #0d4fc8;
     }
 
     footer {
@@ -140,6 +155,7 @@
 
     a {
       color: var(--accent);
+      text-underline-offset: 2px;
     }
 
     @media (min-width: 760px) {
@@ -169,7 +185,7 @@
       <div class="cta-row">
         <a class="btn primary" href="mailto:you@example.com">Email Me</a>
         <a class="btn" href="https://github.com/YuanhuiQu">GitHub</a>
-        <a class="btn" href="https://www.linkedin.com">LinkedIn</a>
+        <a class="btn" href="https://www.linkedin.com/in/yuanhuiqu/">LinkedIn</a>
       </div>
     </header>
 
@@ -206,7 +222,7 @@
           Reach me at <a href="mailto:you@example.com">you@example.com</a>.
           You can also connect on
           <a href="https://github.com/YuanhuiQu">GitHub</a> and
-          <a href="https://www.linkedin.com">LinkedIn</a>.
+          <a href="https://www.linkedin.com/in/yuanhuiqu/">LinkedIn</a>.
         </p>
       </section>
     </main>

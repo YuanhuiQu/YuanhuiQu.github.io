@@ -148,6 +148,54 @@
       color: #fff;
     }
 
+    .game-wrap {
+      margin-top: 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(170deg, #f8fbff 0%, #eef5ff 100%);
+      padding: 0.85rem;
+    }
+
+    .game-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 0.7rem;
+      font-size: 0.9rem;
+      color: #2f476b;
+      font-weight: 600;
+    }
+
+    .game-actions {
+      margin-top: 0.8rem;
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      margin: 0.55rem 0 0;
+      color: #3c5478;
+      font-size: 0.9rem;
+      min-height: 1.3em;
+    }
+
+    .dodge-canvas {
+      width: 100%;
+      height: 300px;
+      border-radius: 12px;
+      border: 1px solid #c9d7f0;
+      background: linear-gradient(180deg, #0f1d36 0%, #1b3158 100%);
+      display: block;
+      touch-action: none;
+    }
+
+    .controls-note {
+      margin: 0.65rem 0 0;
+      color: #4a6389;
+      font-size: 0.86rem;
+    }
+
     footer {
       margin-top: 0.9rem;
       padding: 0 0.35rem;
@@ -195,6 +243,24 @@
             <a class="btn" href="https://github.com/YuanhuiQu">GitHub</a>
           </div>
         </article>
+
+        <article class="panel">
+          <h2>Come play a game!</h2>
+          <p class="muted">Survive as long as possible while meteors speed up over time.</p>
+          <div class="game-wrap">
+            <div class="game-stats">
+              <span>Score: <strong id="dodge-score">0</strong></span>
+              <span>Level: <strong id="dodge-level">1</strong></span>
+              <span>Best: <strong id="dodge-best">0</strong></span>
+            </div>
+            <canvas id="dodge-canvas" class="dodge-canvas" aria-label="Meteor Dodge game area"></canvas>
+            <div class="game-actions">
+              <button id="dodge-start" class="btn primary" type="button">Start Meteor Dodge</button>
+            </div>
+            <p id="dodge-status" class="status">Use Arrow Keys or WASD. On mobile, drag inside the game area.</p>
+            <p class="controls-note">Tip: level increases with score, and each level boosts spawn rate and meteor speed.</p>
+          </div>
+        </article>
       </section>
     </main>
 
@@ -204,6 +270,246 @@
   </div>
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    const dodgeCanvas = document.getElementById("dodge-canvas");
+    const dodgeCtx = dodgeCanvas.getContext("2d");
+    const dodgeScoreEl = document.getElementById("dodge-score");
+    const dodgeLevelEl = document.getElementById("dodge-level");
+    const dodgeBestEl = document.getElementById("dodge-best");
+    const dodgeStatusEl = document.getElementById("dodge-status");
+    const dodgeStartBtn = document.getElementById("dodge-start");
+
+    const dodgeState = {
+      running: false,
+      lastTime: 0,
+      score: 0,
+      level: 1,
+      meteors: [],
+      spawnAccumulator: 0,
+      keys: { left: false, right: false, up: false, down: false },
+      player: { x: 0, y: 0, r: 12, speed: 290 },
+      best: Number(localStorage.getItem("meteorDodgeBest") || 0)
+    };
+
+    dodgeBestEl.textContent = String(dodgeState.best);
+
+    function resizeDodgeCanvas() {
+      const ratio = window.devicePixelRatio || 1;
+      const rect = dodgeCanvas.getBoundingClientRect();
+      dodgeCanvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      dodgeCanvas.height = Math.max(1, Math.floor(rect.height * ratio));
+      dodgeCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function getDodgeWidth() {
+      return dodgeCanvas.getBoundingClientRect().width;
+    }
+
+    function getDodgeHeight() {
+      return dodgeCanvas.getBoundingClientRect().height;
+    }
+
+    function resetDodgePlayer() {
+      dodgeState.player.x = getDodgeWidth() / 2;
+      dodgeState.player.y = getDodgeHeight() - 26;
+    }
+
+    function spawnMeteor() {
+      const width = getDodgeWidth();
+      const levelBoost = 1 + (dodgeState.level - 1) * 0.14;
+      const r = 7 + Math.random() * 16;
+      const speedY = (90 + Math.random() * 120) * levelBoost;
+      const driftX = (Math.random() * 70 - 35) * (0.3 + dodgeState.level * 0.08);
+      dodgeState.meteors.push({
+        x: Math.random() * Math.max(1, width),
+        y: -r - 6,
+        r,
+        vy: speedY,
+        vx: driftX
+      });
+    }
+
+    function drawDodgeBackground(width, height) {
+      dodgeCtx.clearRect(0, 0, width, height);
+      const g = dodgeCtx.createLinearGradient(0, 0, 0, height);
+      g.addColorStop(0, "#132546");
+      g.addColorStop(1, "#0f1d36");
+      dodgeCtx.fillStyle = g;
+      dodgeCtx.fillRect(0, 0, width, height);
+
+      dodgeCtx.fillStyle = "rgba(226, 240, 255, 0.45)";
+      for (let i = 0; i < 30; i += 1) {
+        const x = (i * 97) % width;
+        const y = (i * 61 + dodgeState.score * 9) % height;
+        dodgeCtx.fillRect(x, y, 2, 2);
+      }
+    }
+
+    function drawPlayer() {
+      const p = dodgeState.player;
+      dodgeCtx.beginPath();
+      dodgeCtx.fillStyle = "#69d2ff";
+      dodgeCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      dodgeCtx.fill();
+      dodgeCtx.beginPath();
+      dodgeCtx.fillStyle = "#d7f5ff";
+      dodgeCtx.arc(p.x - 4, p.y - 4, p.r * 0.35, 0, Math.PI * 2);
+      dodgeCtx.fill();
+    }
+
+    function drawMeteors() {
+      dodgeState.meteors.forEach((m) => {
+        const grad = dodgeCtx.createRadialGradient(m.x - m.r * 0.3, m.y - m.r * 0.35, m.r * 0.2, m.x, m.y, m.r);
+        grad.addColorStop(0, "#fff0c8");
+        grad.addColorStop(0.5, "#ffb13c");
+        grad.addColorStop(1, "#cf5e05");
+        dodgeCtx.beginPath();
+        dodgeCtx.fillStyle = grad;
+        dodgeCtx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+        dodgeCtx.fill();
+      });
+    }
+
+    function dodgeGameOver() {
+      dodgeState.running = false;
+      dodgeStartBtn.disabled = false;
+      if (dodgeState.score > dodgeState.best) {
+        dodgeState.best = Math.floor(dodgeState.score);
+        localStorage.setItem("meteorDodgeBest", String(dodgeState.best));
+        dodgeBestEl.textContent = String(dodgeState.best);
+        dodgeStatusEl.textContent = `Crashed at ${Math.floor(dodgeState.score)}. New best score.`;
+        return;
+      }
+      dodgeStatusEl.textContent = `Crashed at ${Math.floor(dodgeState.score)}. Try again.`;
+    }
+
+    function updateDodge(dt) {
+      const width = getDodgeWidth();
+      const height = getDodgeHeight();
+      const p = dodgeState.player;
+
+      if (dodgeState.keys.left) p.x -= p.speed * dt;
+      if (dodgeState.keys.right) p.x += p.speed * dt;
+      if (dodgeState.keys.up) p.y -= p.speed * dt;
+      if (dodgeState.keys.down) p.y += p.speed * dt;
+
+      p.x = Math.max(p.r, Math.min(width - p.r, p.x));
+      p.y = Math.max(p.r, Math.min(height - p.r, p.y));
+
+      dodgeState.score += dt * 12;
+      dodgeState.level = 1 + Math.floor(dodgeState.score / 120);
+      dodgeScoreEl.textContent = String(Math.floor(dodgeState.score));
+      dodgeLevelEl.textContent = String(dodgeState.level);
+
+      const spawnInterval = Math.max(0.16, 0.62 - dodgeState.level * 0.045);
+      dodgeState.spawnAccumulator += dt;
+      while (dodgeState.spawnAccumulator >= spawnInterval) {
+        dodgeState.spawnAccumulator -= spawnInterval;
+        spawnMeteor();
+      }
+
+      dodgeState.meteors.forEach((m) => {
+        m.y += m.vy * dt;
+        m.x += m.vx * dt;
+      });
+      dodgeState.meteors = dodgeState.meteors.filter((m) => m.y - m.r <= height + 10 && m.x + m.r >= -20 && m.x - m.r <= width + 20);
+
+      for (let i = 0; i < dodgeState.meteors.length; i += 1) {
+        const m = dodgeState.meteors[i];
+        const dx = m.x - p.x;
+        const dy = m.y - p.y;
+        if (dx * dx + dy * dy <= (m.r + p.r) * (m.r + p.r)) {
+          dodgeGameOver();
+          break;
+        }
+      }
+    }
+
+    function dodgeLoop(timestamp) {
+      if (!dodgeState.running) {
+        return;
+      }
+
+      if (!dodgeState.lastTime) {
+        dodgeState.lastTime = timestamp;
+      }
+      const dt = Math.min((timestamp - dodgeState.lastTime) / 1000, 0.05);
+      dodgeState.lastTime = timestamp;
+
+      updateDodge(dt);
+      const width = getDodgeWidth();
+      const height = getDodgeHeight();
+      drawDodgeBackground(width, height);
+      drawMeteors();
+      drawPlayer();
+
+      if (dodgeState.running) {
+        requestAnimationFrame(dodgeLoop);
+      }
+    }
+
+    function startDodge() {
+      resizeDodgeCanvas();
+      dodgeState.running = true;
+      dodgeState.lastTime = 0;
+      dodgeState.score = 0;
+      dodgeState.level = 1;
+      dodgeState.spawnAccumulator = 0;
+      dodgeState.meteors = [];
+      dodgeScoreEl.textContent = "0";
+      dodgeLevelEl.textContent = "1";
+      dodgeStatusEl.textContent = "Survive as long as possible.";
+      dodgeStartBtn.disabled = true;
+      resetDodgePlayer();
+      requestAnimationFrame(dodgeLoop);
+    }
+
+    function setDodgeKey(event, isDown) {
+      const key = event.key.toLowerCase();
+      if (key === "arrowleft" || key === "a") dodgeState.keys.left = isDown;
+      if (key === "arrowright" || key === "d") dodgeState.keys.right = isDown;
+      if (key === "arrowup" || key === "w") dodgeState.keys.up = isDown;
+      if (key === "arrowdown" || key === "s") dodgeState.keys.down = isDown;
+    }
+
+    window.addEventListener("keydown", (event) => {
+      setDodgeKey(event, true);
+    });
+    window.addEventListener("keyup", (event) => {
+      setDodgeKey(event, false);
+    });
+
+    dodgeCanvas.addEventListener("pointerdown", (event) => {
+      const rect = dodgeCanvas.getBoundingClientRect();
+      dodgeState.player.x = event.clientX - rect.left;
+      dodgeState.player.y = event.clientY - rect.top;
+      dodgeCanvas.setPointerCapture(event.pointerId);
+    });
+    dodgeCanvas.addEventListener("pointermove", (event) => {
+      if ((event.buttons & 1) !== 1) {
+        return;
+      }
+      const rect = dodgeCanvas.getBoundingClientRect();
+      dodgeState.player.x = event.clientX - rect.left;
+      dodgeState.player.y = event.clientY - rect.top;
+    });
+    dodgeCanvas.addEventListener("pointerup", (event) => {
+      dodgeCanvas.releasePointerCapture(event.pointerId);
+    });
+    dodgeStartBtn.addEventListener("click", startDodge);
+    window.addEventListener("resize", () => {
+      resizeDodgeCanvas();
+      if (!dodgeState.running) {
+        resetDodgePlayer();
+        drawDodgeBackground(getDodgeWidth(), getDodgeHeight());
+        drawPlayer();
+      }
+    });
+
+    resizeDodgeCanvas();
+    resetDodgePlayer();
+    drawDodgeBackground(getDodgeWidth(), getDodgeHeight());
+    drawPlayer();
   </script>
 </body>
 </html>
